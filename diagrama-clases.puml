@@ -1,0 +1,151 @@
+@startuml DiagramaClases
+' Diagrama de clases del proyecto POO (Programa Mutante)
+' Generado a partir de las clases Java del repositorio
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package personas {
+    class Persona {
+        - edad : byte
+        # nombre : String
+        - power : IPower
+        --
+        + Persona()
+        + Persona(pEdad : byte, pNombre : String)
+        + Persona(pNombre : String, pEdad : byte)
+        + Persona(nombre : String)
+        + getNombre() : String
+        + getEdad() : byte
+        + setEdad(pEdad : byte) : void
+        + cantar() : void
+        + setPower(pPower : IPower) : void
+        + atacar() : void
+    }
+}
+
+package poderes {
+    interface IPower {
+        + dispararPoder() : void
+    }
+
+    class PoderFuego {
+        + PoderFuego()
+        + lanzarLlamarada() : void
+        + dispararPoder() : void
+    }
+
+    class PoderHielo {
+        + PoderHielo()
+        + congelar() : void
+        + dispararPoder() : void
+    }
+
+    class PoderPiedras {
+        + tirarPiedras() : void
+        + dispararPoder() : void
+    }
+
+    class PoderRayo {
+        + PoderRayo()
+        + cargarEnergia() : void
+        + dispararPoder() : void
+    }
+
+    class PoderSalud {
+        + PoderSalud()
+        + dispararPoder() : void
+    }
+}
+
+package profesiones {
+    class Barrendero {
+        - name : String
+        - zona : String
+        --
+        + Barrendero(pName : String, pZona : String)
+        + barrer() : void
+        + recogerBasura() : void
+        + {static} main(args : String[]) : void
+    }
+
+    class Bombero {
+        - name : String
+        - estacion : String
+        --
+        + Bombero(pName : String, pEstacion : String)
+        + apagarIncendio(lugar : String) : void
+        + rescatar(persona : String) : void
+        + {static} main(args : String[]) : void
+    }
+
+    class Musico {
+        - name : String
+        - cancionFav : String
+        --
+        + Musico(pName : String, pCancionFav : String)
+        + cantar() : void
+        + tocarInstrumento(instrumento : String) : void
+        + {static} main(args : String[]) : void
+    }
+
+    class Policia {
+        - name : String
+        - armas : int
+        --
+        + Policia(pName : String, pArmas : int)
+        + multas(pSoborno : int) : int
+        + patrullar() : void
+        + arrestar(sospechoso : String) : void
+    }
+
+    class Profesor {
+        - name : String
+        - materia : String
+        --
+        + Profesor(pName : String, pMateria : String)
+        + darClase() : void
+        + calificarExamen(estudiante : String, nota : int) : void
+        + {static} main(args : String[]) : void
+    }
+}
+
+package ProgramaMutante {
+    class quickstart {
+        + {static} main(args : String[]) : void
+    }
+}
+
+' ----- Herencia -----
+Persona <|-- Barrendero
+Persona <|-- Bombero
+Persona <|-- Musico
+Persona <|-- Policia
+Persona <|-- Profesor
+
+' ----- Realizacion (implements) -----
+IPower <|.. PoderFuego
+IPower <|.. PoderHielo
+IPower <|.. PoderPiedras
+IPower <|.. PoderRayo
+IPower <|.. PoderSalud
+
+' ----- Asociaciones -----
+Persona "1" o--> "1" IPower : power >
+
+' ----- Dependencias (uso desde el main) -----
+quickstart ..> Persona
+quickstart ..> IPower
+quickstart ..> Musico
+quickstart ..> Policia
+quickstart ..> Barrendero
+quickstart ..> Bombero
+quickstart ..> Profesor
+quickstart ..> PoderFuego
+quickstart ..> PoderHielo
+quickstart ..> PoderPiedras
+quickstart ..> PoderRayo
+quickstart ..> PoderSalud
+
+@enduml
