@@ -20,7 +20,6 @@ El diseño completo tiene 26 clases, así que se presenta en cuatro vistas del m
 ### 2.1 Vista general: `BankingService` y sus colaboradores
 
 `BankingService` depende únicamente de las tres clases abstractas. Las etiquetas de las flechas indican qué métodos polimórficos llama en cada una.
-98
 ```mermaid
 classDiagram
 direction TB
@@ -271,6 +270,200 @@ SwiftGatewayAdapter --> SwiftGatewayProcessor : processInternationalTransfer()<b
 Cualquier combinación que no aparece en la tabla (por ejemplo, una nómina por SWIFT) cae en la implementación por defecto de `PaymentProcessor`, que devuelve `rejected("SWIFT does not support PAYROLL")`. Por eso el antiguo `processorSupports` ya no existe.
 
 `calculateFee` sigue la misma idea: `NationalBankAdapter` devuelve 0, `PacificBankAdapter` el 0,5 % redondeado y `SwiftGatewayAdapter` 25 más 1 % si la moneda no es USD.
+
+Aqui se puede ver la version completa del diagrama 
+
+classDiagram
+direction LR
+
+class BankingService {
+  -ProcessorRegistry processors
+  -DailyUsageTracker usageTracker
+  -AuditLog auditLog
+  +BankingService(ProcessorRegistry, DailyUsageTracker, AuditLog)
+  +execute(User, Class~T~ identityType, BankOperation, String processorName, LocalDate) OperationResult
+  -reject(User, String reason) OperationResult
+}
+class User {
+  -String id
+  -String fullName
+  +addIdentity(Identity)
+  +findIdentity(Class~T~ type) T
+}
+class ProcessorRegistry {
+  -Map~String, PaymentProcessor~ byName
+  +register(PaymentProcessor)
+  +find(String name) PaymentProcessor
+}
+class Identity {
+  <<abstract>>
+  -String documentNumber
+  -String accountNumber
+  +getTypeName()* String
+  +dailyLimit()* double
+  #allowedOperations()* Set~OperationType~
+  +canPerform(BankOperation) boolean
+  +canUse(PaymentProcessor) boolean
+  +validate(BankOperation, LocalDate today) String
+}
+class BankOperation {
+  <<abstract>>
+  -double amount
+  -String currency
+  -String approvalCode
+  +getType()* OperationType
+  +executeOn(PaymentProcessor, Identity)* ProcessorResult
+  +totalAmount() double
+  +countsTowardDailyLimit() boolean
+  +validate() String
+}
+class PaymentProcessor {
+  <<abstract>>
+  +getName()* String
+  +calculateFee(BankOperation)* double
+  +process(Identity, BankOperation) ProcessorResult
+  +processDeposit(Identity, Deposit)
+  +processWithdrawal(Identity, Withdrawal)
+  +processDomesticTransfer(Identity, DomesticTransfer)
+  +processInternationalTransfer(Identity, InternationalTransfer)
+  +processPayroll(Identity, Payroll)
+}
+class ProcessorResult {
+  -boolean success
+  -String reference
+  -String message
+  +ok(String reference)$ ProcessorResult
+  +rejected(String message)$ ProcessorResult
+  +isSuccess() boolean
+}
+class DailyUsageTracker
+class AuditLog
+class OperationResult
+class PersonalIdentity {
+  +getTypeName() String
+  +dailyLimit() double
+  #allowedOperations() Set~OperationType~
+}
+class BusinessIdentity {
+  -String companyName
+  +getTypeName() String
+  +dailyLimit() double
+  #allowedOperations() Set~OperationType~
+  +validate(BankOperation, LocalDate today) String
+}
+class MinorIdentity {
+  -String guardianUserId
+  +getTypeName() String
+  +dailyLimit() double
+  #allowedOperations() Set~OperationType~
+  +canUse(PaymentProcessor) boolean
+}
+class ForeignResidentIdentity {
+  -String countryCode
+  -LocalDate residencyExpiresOn
+  +getTypeName() String
+  +dailyLimit() double
+  #allowedOperations() Set~OperationType~
+  +validate(BankOperation, LocalDate today) String
+}
+class Deposit {
+  +getType() OperationType
+  +executeOn(PaymentProcessor, Identity) ProcessorResult
+  +countsTowardDailyLimit() boolean
+}
+class Withdrawal {
+  +getType() OperationType
+  +executeOn(PaymentProcessor, Identity) ProcessorResult
+}
+class Transfer {
+  <<abstract>>
+  -String destinationAccount
+  +validate() String
+}
+class DomesticTransfer {
+  +getType() OperationType
+  +executeOn(PaymentProcessor, Identity) ProcessorResult
+}
+class InternationalTransfer {
+  -String destinationBic
+  +getType() OperationType
+  +executeOn(PaymentProcessor, Identity) ProcessorResult
+  +validate() String
+}
+class Payroll {
+  -List~String~ payees
+  +getType() OperationType
+  +executeOn(PaymentProcessor, Identity) ProcessorResult
+  +totalAmount() double
+  +validate() String
+}
+class NationalBankAdapter {
+  -NationalBankProcessor api
+  +getName() String
+  +calculateFee(BankOperation) double
+  +processDeposit(Identity, Deposit)
+  +processWithdrawal(Identity, Withdrawal)
+  +processDomesticTransfer(Identity, DomesticTransfer)
+}
+class PacificBankAdapter {
+  -PacificBankProcessor api
+  +getName() String
+  +calculateFee(BankOperation) double
+  +processDomesticTransfer(Identity, DomesticTransfer)
+  +processPayroll(Identity, Payroll)
+  -toCents(double amount) long
+  -translate(String response) ProcessorResult
+}
+class SwiftGatewayAdapter {
+  -SwiftGatewayProcessor api
+  +getName() String
+  +calculateFee(BankOperation) double
+  +processInternationalTransfer(Identity, InternationalTransfer)
+}
+class NationalBankProcessor {
+  <<API externa>>
+  +postTransaction(String accountNumber, String kind, double amount, String counterparty) String
+}
+class PacificBankProcessor {
+  <<API externa>>
+  +submit(String customerRef, String operationCode, long amountInCents, String destination) String
+  +submitPayroll(String customerRef, List~String~ accounts, long centsPerAccount) String
+}
+class SwiftGatewayProcessor {
+  <<API externa>>
+  +sendWire(String fromAccount, String toAccount, String bic, double amount, String currency) String
+}
+
+Identity <|-- PersonalIdentity
+Identity <|-- BusinessIdentity
+Identity <|-- MinorIdentity
+Identity <|-- ForeignResidentIdentity
+BankingService ..> User : findIdentity()
+BankingService ..> Identity : canPerform(), validate(),<br>dailyLimit(), canUse()
+User "1" o-- "*" Identity
+BankingService --> DailyUsageTracker
+BankingService --> AuditLog
+BankingService ..> OperationResult : crea
+BankingService --> ProcessorRegistry
+ProcessorRegistry "1" o-- "*" PaymentProcessor
+BankingService ..> PaymentProcessor : process(), calculateFee()
+PaymentProcessor ..> ProcessorResult : devuelve
+PaymentProcessor <|-- NationalBankAdapter
+PaymentProcessor <|-- PacificBankAdapter
+PaymentProcessor <|-- SwiftGatewayAdapter
+NationalBankAdapter --> NationalBankProcessor : processDeposit()<br>processWithdrawal()<br>processDomesticTransfer()<br>→ postTransaction()
+PacificBankAdapter --> PacificBankProcessor : processDomesticTransfer()<br>→ submit()
+PacificBankAdapter --> PacificBankProcessor : processPayroll()<br>→ submitPayroll()
+SwiftGatewayAdapter --> SwiftGatewayProcessor : processInternationalTransfer()<br>→ sendWire()
+BankingService ..> BankOperation : validate(), totalAmount(),<br>countsTowardDailyLimit()
+BankOperation ..> PaymentProcessor : executeOn()
+BankOperation <|-- Deposit
+BankOperation <|-- Withdrawal
+BankOperation <|-- Transfer
+BankOperation <|-- Payroll
+Transfer <|-- DomesticTransfer
+Transfer <|-- InternationalTransfer
+
 
 ## 3. Dónde se aplica el polimorfismo
 
