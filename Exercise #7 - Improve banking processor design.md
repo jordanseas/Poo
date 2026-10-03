@@ -273,6 +273,7 @@ Cualquier combinación que no aparece en la tabla (por ejemplo, una nómina por 
 
 Aqui se puede ver la version completa del diagrama 
 
+```mermaid
 classDiagram
 direction LR
 
@@ -463,7 +464,7 @@ BankOperation <|-- Transfer
 BankOperation <|-- Payroll
 Transfer <|-- DomesticTransfer
 Transfer <|-- InternationalTransfer
-
+```
 
 ## 3. Dónde se aplica el polimorfismo
 
